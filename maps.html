@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps Example</title>
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        #participant {
+        width: 300px;
+        height: 30px;
+        }
+        #pursuit {
+        width: 300px;
+        height: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Maps Example</h1>
+    <div id="map"></div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAXDkukOGQXrga9Oz7CkbeDdPM0hp-Zf1M&callback=initMap" async defer></script>
+    <script>
+        function initMap() {
+            var map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 37.7749, lng: -122.4194 }, // Default center (San Francisco)
+                zoom: 16
+            });
+            
+            fetchParticipants(); // Fetch the initial JSON data to populate the participant list
+
+    var map;
+    var participants;
+    var selectedMarker = null; // Keep track of the selected marker
+
+function fetchParticipants() {
+
+    var jsonURLInput = document.getElementById('jsonURLInput');
+    var jsonURL = jsonURLInput.value.trim();
+
+    if (!jsonURL) {
+        console.error('Please provide a valid JSON URL');
+        return;
+    }
+    else{
+
+        // Check if participants data is already fetched
+        if (participants) {
+            // Fetch only the updated participant coordinates
+            // fetch('http://127.0.0.1/Project_0/proxy.php')
+            // fetch('https://rest.anube.es/rallyrest/default/api/participants/5007.json?rally=rally5007&port=auto')
+            fetch(jsonURL)
+                .then(response => response.json())
+                .then(data => {
+                    data.event.data.participants.forEach(updatedParticipant => {
+                        // Find the corresponding participant in the stored data
+                        var storedParticipant = participants.find(participant => participant.dorsal === updatedParticipant.dorsal);
+
+                        // Update the stored participant's coordinates
+                        if (storedParticipant) {
+                            storedParticipant.latitude = updatedParticipant.latitude;
+                            storedParticipant.longitude = updatedParticipant.longitude;
+                        }
+                    });
+
+                    updateParticipantCoordinates();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        } else {
+                // Fetch the JSON data for the first time
+                // fetch('http://127.0.0.1/Project_0/proxy.php')
+                // fetch('https://rest.anube.es/rallyrest/default/api/participants/5007.json?rally=rally5007&port=auto')
+                fetch(jsonURL)
+                    .then(response => response.json())
+                    .then(data => {
+                        participants = data.event.data.participants;
+                        const participantSelect = document.getElementById('participant');
+                        const pursuitSelect = document.getElementById('pursuit');
+                        
+                        // Generate the participant list options
+                        participantSelect.innerHTML = ''; // Clear previous options
+                        pursuitSelect.innerHTML = ''; // Clear previous options
+
+                        participants.forEach(participant => {
+                            const option = document.createElement('option');
+                            option.value = participant.dorsal;
+                            option.textContent = participant.piloto;
+                            participantSelect.appendChild(option.cloneNode(true));
+                            pursuitSelect.appendChild(option.cloneNode(true));
+                        });
+
+                        updateParticipantCoordinates();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+    }
+}
+
+    
+function updateParticipantCoordinates() {
+                // Retrieve the selected participant
+                var selectedParticipantId = document.getElementById('participant').value;
+                var selectedPursuitId = document.getElementById('pursuit').value;
+
+                // Find the selected participant in the JSON data
+                var selectedParticipant = participants.find(participant => participant.dorsal === selectedParticipantId);
+                var selectedPursuit = participants.find(participant => participant.dorsal === selectedPursuitId);
+
+                if (selectedParticipant) {
+                    // Check if the latitude and longitude are valid
+                    if (typeof selectedParticipant.latitude === 'number' && typeof selectedParticipant.longitude === 'number') {
+                        // Perform necessary actions to center the map on the participant's location
+                        var mapOptions = {
+                            center: { lat: selectedParticipant.latitude, lng: selectedParticipant.longitude },
+                        };
+
+                        if (!map) {
+                            map = new google.maps.Map(document.getElementById("map"), mapOptions);
+                        } else {
+                            map.setOptions(mapOptions);
+                        }
+
+                        // Clear the previously selected marker
+                        if (selectedMarker) {
+                            selectedMarker.setMap(null);
+                        }
+
+                        // Create a new marker at the selected participant's coordinates
+                        selectedMarker = new google.maps.Marker({
+                            position: { lat: selectedParticipant.latitude, lng: selectedParticipant.longitude },
+                            map: map,
+                            title: 'Selected Participant',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 8,
+                                fillColor: 'red',
+                                fillOpacity: 1,
+                                strokeColor: 'white',
+                                strokeWeight: 2
+                            }
+                        });
+
+                        // Print the coordinates to the console
+                        console.log('Selected Participant Coordinates:');
+                        console.log('Latitude:', selectedParticipant.latitude);
+                        console.log('Longitude:', selectedParticipant.longitude);
+                    } else {
+                        console.error('Invalid coordinates for the selected participant');
+                    }
+                }
+
+                if (selectedPursuit) {
+                    // Check if the latitude and longitude are valid
+                    if (typeof selectedPursuit.latitude === 'number' && typeof selectedPursuit.longitude === 'number') {
+                        // Create a new marker at the selected pursuit's coordinates
+                        var pursuitMarker = new google.maps.Marker({
+                            position: { lat: selectedPursuit.latitude, lng: selectedPursuit.longitude },
+                            map: map,
+                            title: 'Selected Pursuit',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 8,
+                                fillColor: 'green',
+                                fillOpacity: 1,
+                                strokeColor: 'white',
+                                strokeWeight: 2
+                            }
+                        });
+
+                        // Print the coordinates to the console
+                        console.log('Selected Pursuit Coordinates:');
+                        console.log('Latitude:', selectedPursuit.latitude);
+                        console.log('Longitude:', selectedPursuit.longitude);
+                    } else {
+                        console.error('Invalid coordinates for the selected pursuit');
+                    }
+                }
+            }
+
+            // Call fetchParticipants function every second
+            setInterval(fetchParticipants, 1000);
+        }
+    </script>
+
+    <label for="participant">Select participant:</label>
+    <select id="participant"></select>
+
+    <br><br>
+
+    <label for="pursuit">Select pursuit:</label>
+    <select id="pursuit"></select>
+
+    <br><br>
+
+    <label for="jsonURLInput">JSON URL:</label>
+    <input type="text" id="jsonURLInput">
+
+    <br><br>
+
+    <button onclick="fetchParticipants()">Fetch Participants</button>
+
+    <br><br>
+
+    <button onclick="updateParticipantCoordinates()">Center on Participant</button>
+</body>
+</html>
+
